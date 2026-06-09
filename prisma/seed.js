@@ -6,8 +6,9 @@ const prisma = new PrismaClient();
 
 // Dati seed — corrispondono alla versione mock ma con tutti i campi reali
 const areas = [
-  { id: "cgfs", name: "CGFS", subtitle: "Centro di Formazione e Sviluppo", description: "Percorso formativo, corsi, Volley S3, crescita motoria e competenze." },
-  { id: "pvp",  name: "PVP",  subtitle: "Prato Volley Project",            description: "Societa, squadre, staff tecnico, calendari e attivita agonistica." },
+  { id: "shared", name: "Shared", subtitle: "Condiviso", description: "Contenuti condivisi tra tutte le aree." },
+  { id: "cgfs",   name: "CGFS",   subtitle: "Centro di Formazione e Sviluppo", description: "Percorso formativo, corsi, Volley S3, crescita motoria e competenze." },
+  { id: "pvp",    name: "PVP",    subtitle: "Prato Volley Project",            description: "Societa, squadre, staff tecnico, calendari e attivita agonistica." },
 ];
 
 const seasons = [{ id: "2025-2026", name: "2025/2026", active: true }];
