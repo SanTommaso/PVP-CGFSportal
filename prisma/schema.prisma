@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Area {
+  id        String   @id
+  name      String
+  createdAt DateTime @default(now())
+
+  levels    Level[]
+  clubs     Club[]
+  coaches   CoachProfile[]
+  teams     Team[]
+  athletes  AthleteProfile[]
+  exercises Exercise[]
+  workouts  Workout[]
+  matches   Match[]
+  surveys   Survey[]
+}
+
+model Season {
+  id        String   @id
+  name      String
+  active    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  teams       Team[]
+  assignments CoachTeamAssignment[]
+  workouts    Workout[]
+  matches     Match[]
+  surveys     Survey[]
+}
+
+model Level {
+  id       String @id
+  areaId   String
+  name     String
+  ageRange String?
+
+  area      Area             @relation(fields: [areaId], references: [id])
+  teams     Team[]
+  athletes  AthleteProfile[]
+  exercises Exercise[]
+
+  @@index([areaId])
+}
+
+model Club {
+  id     String @id
+  areaId String
+  name   String
+
+  area     Area             @relation(fields: [areaId], references: [id])
+  teams    Team[]
+  athletes AthleteProfile[]
+
+  @@index([areaId])
+}
+
+model CoachProfile {
+  id        String   @id
+  areaId    String
+  fullName  String
+  email     String?
+  phone     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  area        Area                  @relation(fields: [areaId], references: [id])
+  assignments CoachTeamAssignment[]
+  exercises   Exercise[]
+  workouts    Workout[]
+  matches     Match[]
+  surveys     Survey[]
+
+  @@index([areaId, active])
+}
+
+model Team {
+  id       String @id
+  areaId   String
+  seasonId String
+  clubId   String?
+  levelId  String?
+  name     String
+  court    String?
+
+  area        Area                  @relation(fields: [areaId], references: [id])
+  season     Season                @relation(fields: [seasonId], references: [id])
+  club       Club?                 @relation(fields: [clubId], references: [id])
+  level      Level?                @relation(fields: [levelId], references: [id])
+  athletes   AthleteProfile[]
+  workouts   Workout[]
+  matches    Match[]
+  assignments CoachTeamAssignment[]
+
+  @@index([areaId, seasonId])
+  @@index([clubId, levelId])
+}
+
+model CoachTeamAssignment {
+  id        String @id @default(cuid())
+  coachId   String
+  teamId    String
+  seasonId  String
+  role      String?
+  createdAt DateTime @default(now())
+
+  coach  CoachProfile @relation(fields: [coachId], references: [id])
+  team   Team         @relation(fields: [teamId], references: [id])
+  season Season       @relation(fields: [seasonId], references: [id])
+
+  @@unique([coachId, teamId, seasonId])
+  @@index([teamId, seasonId])
+}
+
+model AthleteProfile {
+  id          String    @id
+  areaId      String
+  fullName    String
+  birthDate   DateTime?
+  levelId     String?
+  clubId      String?
+  teamId      String?
+  role        String?
+  active      Boolean   @default(true)
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  area  Area   @relation(fields: [areaId], references: [id])
+  level Level? @relation(fields: [levelId], references: [id])
+  club  Club?  @relation(fields: [clubId], references: [id])
+  team  Team?  @relation(fields: [teamId], references: [id])
+
+  @@index([areaId, active])
+  @@index([teamId])
+}
+
+model Exercise {
+  id               String   @id
+  areaId           String
+  levelId          String?
+  createdByCoachId String?
+  title            String
+  category         String?
+  objective        String?
+  description      String?
+  players          String?
+  duration         String?
+  createdAt        DateTime @default(now())
+
+  area           Area          @relation(fields: [areaId], references: [id])
+  level          Level?        @relation(fields: [levelId], references: [id])
+  createdByCoach CoachProfile? @relation(fields: [createdByCoachId], references: [id])
+  media          ExerciseMedia[]
+
+  @@index([areaId, levelId])
+  @@index([createdByCoachId])
+}
+
+model ExerciseMedia {
+  id         String   @id @default(cuid())
+  exerciseId String
+  mediaType  String
+  url        String
+  createdAt  DateTime @default(now())
+
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([exerciseId])
+  @@unique([exerciseId, mediaType, url])
+}
+
+model Workout {
+  id             String   @id
+  areaId         String
+  seasonId       String
+  teamId         String
+  coachProfileId String?
+  title          String
+  day            String?
+  time           String?
+  status         String?
+  createdAt      DateTime @default(now())
+
+  area   Area          @relation(fields: [areaId], references: [id])
+  season Season        @relation(fields: [seasonId], references: [id])
+  team   Team          @relation(fields: [teamId], references: [id])
+  coach  CoachProfile? @relation(fields: [coachProfileId], references: [id])
+
+  @@index([areaId, seasonId])
+  @@index([coachProfileId, teamId])
+}
+
+model Match {
+  id             String   @id
+  areaId         String
+  seasonId       String
+  teamId         String
+  coachProfileId String?
+  opponent       String
+  date           String
+  result         String?
+  createdAt      DateTime @default(now())
+
+  area   Area          @relation(fields: [areaId], references: [id])
+  season Season        @relation(fields: [seasonId], references: [id])
+  team   Team          @relation(fields: [teamId], references: [id])
+  coach  CoachProfile? @relation(fields: [coachProfileId], references: [id])
+
+  @@index([areaId, seasonId])
+  @@index([teamId])
+}
+
+model Survey {
+  id             String   @id
+  areaId         String
+  seasonId       String?
+  coachProfileId String?
+  title          String
+  responses      Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  area   Area          @relation(fields: [areaId], references: [id])
+  season Season?       @relation(fields: [seasonId], references: [id])
+  coach  CoachProfile? @relation(fields: [coachProfileId], references: [id])
+
+  @@index([areaId, seasonId])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
