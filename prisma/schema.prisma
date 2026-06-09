@@ -8,9 +8,11 @@ datasource db {
 }
 
 model Area {
-  id        String   @id
-  name      String
-  createdAt DateTime @default(now())
+  id          String   @id
+  name        String
+  subtitle    String?
+  description String?
+  createdAt   DateTime @default(now())
 
   levels    Level[]
   clubs     Club[]
@@ -68,6 +70,9 @@ model CoachProfile {
   fullName  String
   email     String?
   phone     String?
+  role      String?
+  teamId    String?
+  locked    Boolean  @default(false)
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
 
@@ -152,6 +157,17 @@ model Exercise {
   description      String?
   players          String?
   duration         String?
+  exerciseType     String?
+  durationSeconds  Int?
+  ageGroups        String?
+  typology         String?
+  subtype          String?
+  regime           String?
+  regimeSubtype    String?
+  youtubeUrl       String?
+  youtubeUrl2      String?
+  imageUrl         String?
+  imageUrl2        String?
   createdAt        DateTime @default(now())
 
   area           Area          @relation(fields: [areaId], references: [id])
@@ -224,6 +240,8 @@ model Survey {
   coachProfileId String?
   title          String
   responses      Int      @default(0)
+  status         String?
+  questions      String?
   createdAt      DateTime @default(now())
 
   area   Area          @relation(fields: [areaId], references: [id])

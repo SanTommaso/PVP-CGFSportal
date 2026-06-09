@@ -92,6 +92,156 @@ app.get("/api/auth/me", requireAuth, (req, res) => {
   res.json({ username: req.user.username });
 });
 
+// --- Route API dati ---
+
+function parseJson(value, fallback = []) {
+  if (!value) return fallback;
+  try { return JSON.parse(value); } catch { return fallback; }
+}
+
+function exerciseOut(ex) {
+  return { ...ex, ageGroups: parseJson(ex.ageGroups) };
+}
+
+function surveyOut(s) {
+  return { ...s, questions: parseJson(s.questions) };
+}
+
+// Bootstrap (aree, stagioni, livelli, club)
+app.get("/api/bootstrap", requireAuth, async (req, res) => {
+  try {
+    const [areas, seasons, levels, clubs] = await Promise.all([
+      prisma.area.findMany(),
+      prisma.season.findMany({ orderBy: { name: "desc" } }),
+      prisma.level.findMany({ orderBy: { name: "asc" } }),
+      prisma.club.findMany({ orderBy: { name: "asc" } }),
+    ]);
+    res.json({ areas, seasons, levels, clubs });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Errore nel recupero del bootstrap" });
+  }
+});
+
+// Esercizi
+app.get("/api/exercises", requireAuth, async (req, res) => {
+  try {
+    const { areaId, query = "" } = req.query;
+    const normalized = query.trim().toLowerCase();
+    const all = await prisma.exercise.findMany({ orderBy: { createdAt: "desc" } });
+    const result = all.filter((ex) => {
+      const matchesArea = !areaId || ex.areaId === "shared" || ex.areaId === areaId;
+      const haystack = `${ex.title} ${ex.category} ${ex.objective} ${ex.description} ${ex.typology || ""} ${ex.subtype || ""} ${ex.regime || ""}`.toLowerCase();
+      return matchesArea && (!normalized || haystack.includes(normalized));
+    });
+    res.json(result.map(exerciseOut));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Errore nel recupero degli esercizi" });
+  }
+});
+
+app.post("/api/exercises", requireAuth, async (req, res) => {
+  try {
+    const p = req.body ?? {};
+    const exercise = await prisma.exercise.create({
+      data: {
+        id: `exercise-${Date.now()}`,
+        areaId: p.areaId || "shared",
+        levelId: p.levelId || null,
+        title: String(p.title ?? "").trim(),
+        category: p.category || null,
+        objective: p.objective || null,
+        description: p.description || null,
+        players: p.players || null,
+        duration: p.duration || null,
+        exerciseType: p.exerciseType || null,
+        durationSeconds: p.durationSeconds ? Number(p.durationSeconds) : null,
+        ageGroups: Array.isArray(p.ageGroups) ? JSON.stringify(p.ageGroups) : null,
+        typology: p.typology || null,
+        subtype: p.subtype || null,
+        regime: p.regime || null,
+        regimeSubtype: p.regimeSubtype || null,
+        youtubeUrl: p.youtubeUrl || null,
+        youtubeUrl2: p.youtubeUrl2 || null,
+        imageUrl: p.imageUrl || null,
+        imageUrl2: p.imageUrl2 || null,
+      },
+    });
+    res.json(exerciseOut(exercise));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Errore nella creazione dell'esercizio" });
+  }
+});
+
+// Profili coach (usati nel selettore PVP)
+app.get("/api/coach-profiles", requireAuth, async (req, res) => {
+  try {
+    const { areaId = "pvp" } = req.query;
+    if (areaId !== "pvp") return res.json([]);
+    const profiles = await prisma.coachProfile.findMany({
+      where: { areaId: "pvp", active: true },
+      orderBy: { fullName: "asc" },
+    });
+    res.json(profiles);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Errore nel recupero dei profili" });
+  }
+});
+
+// Dashboard PVP
+app.get("/api/pvp/dashboard", requireAuth, async (req, res) => {
+  try {
+    const { coachProfileId, seasonId = "2025-2026" } = req.query;
+    if (!coachProfileId) return res.status(400).json({ error: "coachProfileId richiesto" });
+
+    const isAdmin = coachProfileId === "coach-admin";
+
+    const [coach, allTeams, workouts, matchesList, surveys, staff, exercises, clubs, levels, roster] =
+      await Promise.all([
+        prisma.coachProfile.findUnique({ where: { id: coachProfileId } }),
+        prisma.team.findMany({ where: { areaId: "pvp", seasonId } }),
+        prisma.workout.findMany({ where: { areaId: "pvp", seasonId } }),
+        prisma.match.findMany({ where: { areaId: "pvp", seasonId } }),
+        prisma.survey.findMany({ where: { areaId: "pvp" } }),
+        prisma.coachProfile.findMany({ where: { areaId: "pvp", active: true } }),
+        prisma.exercise.findMany({ orderBy: { createdAt: "desc" } }),
+        prisma.club.findMany({ where: { areaId: "pvp" } }),
+        prisma.level.findMany({ where: { areaId: "pvp" } }),
+        prisma.athleteProfile.findMany({ where: { areaId: "pvp", active: true } }),
+      ]);
+
+    let ownTeamIds;
+    if (isAdmin) {
+      ownTeamIds = allTeams.map((t) => t.id);
+    } else {
+      const assignments = await prisma.coachTeamAssignment.findMany({
+        where: { coachId: coachProfileId, seasonId },
+      });
+      ownTeamIds = assignments.map((a) => a.teamId);
+    }
+
+    res.json({
+      coach,
+      ownTeamIds,
+      teams: allTeams,
+      roster,
+      workouts,
+      matches: matchesList,
+      surveys: surveys.map(surveyOut),
+      staff,
+      exercises: exercises.map(exerciseOut),
+      clubs,
+      levels,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Errore nel recupero della dashboard" });
+  }
+});
+
 // --- Serving della React app ---
 // Tutte le altre rotte servono i file statici dalla build di Vite (dist/)
 // o ritornano index.html per permettere al router client-side di funzionare.

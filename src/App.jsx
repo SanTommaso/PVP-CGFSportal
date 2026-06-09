@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { dataClient, dataSource } from "./data/dataClient.js";
-import { staffProfiles as initialStaffProfiles, teams as initialTeams } from "./data/mockData.js";
+import { teams as initialTeams } from "./data/mockData.js";
 import { getYouTubeEmbedUrl } from "./lib/youtube.js";
 import LoginPage from "./LoginPage.jsx";
 
@@ -81,7 +81,7 @@ export default function App() {
   const path = useRoute();
   const [currentArea, setCurrentArea] = useState(() => readStorage("currentArea"));
   const [selectedCoachId, setSelectedCoachId] = useState(() => readStorage("selectedCoachId"));
-  const [staffProfiles, setStaffProfiles] = useState(initialStaffProfiles);
+  const [staffProfiles, setStaffProfiles] = useState([]);
   const [authState, setAuthState] = useState("loading"); // "loading" | "ok" | "login"
 
   useEffect(() => writeStorage("currentArea", currentArea), [currentArea]);
@@ -93,6 +93,12 @@ export default function App() {
       .then(() => setAuthState("ok"))
       .catch(() => setAuthState("login"));
   }, []);
+
+  useEffect(() => {
+    if (authState === "ok") {
+      dataClient.getCoachProfiles({ areaId: "pvp" }).then(setStaffProfiles).catch(() => {});
+    }
+  }, [authState]);
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
