@@ -1070,6 +1070,7 @@ legend {
 
 @media (max-width: 1180px) {
   .cgfs-workspace,
+  .cgfs-workspace.no-sidebar,
   .workspace,
   .chooser-screen,
   .coach-screen {
