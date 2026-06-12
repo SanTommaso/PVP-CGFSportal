@@ -22,6 +22,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 button,
@@ -842,6 +843,7 @@ legend {
   grid-template-columns: repeat(6, minmax(150px, 1fr));
   gap: 12px;
   overflow-x: auto;
+  min-width: 0;
 }
 
 .chart-section,
@@ -1173,14 +1175,28 @@ legend {
   .field-row,
   .split-grid,
   .dashboard-grid,
-  .report-filters,
   .report-summary {
     grid-template-columns: 1fr;
   }
 
-  /* Bar-row: mantiene layout orizzontale, riduce larghezza etichetta */
+  /* Report-filters a 2 colonne su mobile medio: riduce lo scroll verticale */
+  .report-filters {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .report-filters .primary-button {
+    grid-column: 1 / -1;
+  }
+
+  /* Bar-row: limita larghezza etichetta per non schiacciare la barra */
   .bar-row {
-    grid-template-columns: auto 1fr 44px;
+    grid-template-columns: minmax(0, 130px) 1fr 44px;
+  }
+
+  .bar-row > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* Report table: scroll orizzontale invece di collassare le colonne */
@@ -1202,14 +1218,46 @@ legend {
     grid-template-columns: 1fr;
   }
 
-  .section-header,
+  /* Section-header: titolo + pulsante impilati, allineati a sinistra */
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  /* Toolbar: ricerca + contatore a colonna intera */
   .toolbar {
     align-items: stretch;
     flex-direction: column;
   }
 
+  /* Sidebar nav: strip orizzontale scorrevole invece di griglia */
+  .sidebar {
+    position: static;
+    height: auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .sidebar::-webkit-scrollbar {
+    display: none;
+  }
+
   .sidebar nav {
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding-bottom: 2px;
+  }
+
+  .sidebar nav button {
+    flex-shrink: 0;
+    min-height: 44px;
+    white-space: nowrap;
+    border: 1px solid var(--border);
+    padding: 0 14px;
+    border-radius: 22px;
   }
 
   /* Titolo sidebar ridondante su mobile (la sezione attiva è già nell'header) */
@@ -1238,16 +1286,22 @@ legend {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  /* Filtri report a 2 colonne per ridurre lo scroll verticale */
+  /* Su telefoni piccoli i filtri tornano a colonna singola */
   .report-filters {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .report-filters .primary-button {
-    grid-column: 1 / -1;
+    grid-template-columns: 1fr;
   }
 
   .stat-strip strong {
     font-size: 26px;
+  }
+
+  /* Topbar: riduce dimensioni dei controlli sullo status per lasciare spazio al brand */
+  .coach-change {
+    font-size: 12px;
+  }
+
+  .logout-button {
+    padding: 5px 8px;
+    font-size: 12px;
   }
 }
