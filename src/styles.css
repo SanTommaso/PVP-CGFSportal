@@ -1074,32 +1074,75 @@ legend {
     grid-template-columns: 1fr;
   }
 
+  .workspace,
+  .coach-screen {
+    padding: 18px;
+  }
+
   .sidebar {
     position: static;
     height: auto;
   }
 
   .sidebar nav {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
 }
 
 @media (max-width: 760px) {
+  /* Topbar: brand + logout su stessa riga, area-switch sotto */
   .topbar {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "brand status"
+      "switch switch";
     height: auto;
-    padding: 14px;
+    padding: 12px 14px;
+    gap: 10px;
   }
 
-  .area-switch,
-  .topbar-status {
-    grid-column: 1 / -1;
+  .brand-button {
+    grid-area: brand;
+  }
+
+  .area-switch {
+    grid-area: switch;
     justify-self: stretch;
   }
 
-  .area-switch button,
-  .topbar-status > * {
+  .topbar-status {
+    grid-area: status;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .area-switch button {
     flex: 1;
+  }
+
+  /* Nasconde elementi non essenziali su mobile */
+  .data-source,
+  .brand-button small {
+    display: none;
+  }
+
+  /* Brand-button: permette di restringersi se coach-change è visibile */
+  .brand-button {
+    min-width: 0;
+    max-width: none;
+    overflow: hidden;
+  }
+
+  .brand-button > span:not(.brand-mark) {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .brand-button strong {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .chooser-screen,
@@ -1109,12 +1152,16 @@ legend {
   }
 
   .chooser-copy,
-  .chooser-preview,
   .content-area,
   .form-drawer,
   .coach-card,
   .coach-preview {
     padding: 18px;
+  }
+
+  /* Pannello preview nascosto su mobile: solo le card di scelta */
+  .chooser-preview {
+    display: none;
   }
 
   .brand-lockup {
@@ -1126,15 +1173,31 @@ legend {
   .field-row,
   .split-grid,
   .dashboard-grid,
-  .bar-row,
   .report-filters,
-  .report-summary,
-  .report-table-head,
-  .report-table-row {
+  .report-summary {
     grid-template-columns: 1fr;
   }
 
-  .mini-calendar,
+  /* Bar-row: mantiene layout orizzontale, riduce larghezza etichetta */
+  .bar-row {
+    grid-template-columns: auto 1fr 44px;
+  }
+
+  /* Report table: scroll orizzontale invece di collassare le colonne */
+  .report-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .report-table-head,
+  .report-table-row {
+    min-width: 500px;
+  }
+
+  .mini-calendar {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+
   .stat-strip {
     grid-template-columns: 1fr;
   }
@@ -1143,5 +1206,48 @@ legend {
   .toolbar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .sidebar nav {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
+
+  /* Titolo sidebar ridondante su mobile (la sezione attiva è già nell'header) */
+  .sidebar strong {
+    display: none;
+  }
+
+  /* Form drawer su mobile: non limitare l'altezza, scorre con la pagina */
+  .wide-form {
+    max-height: none;
+  }
+
+  /* Target touch adeguato per i pulsanti nelle righe gestite */
+  .managed-row button {
+    min-height: 44px;
+  }
+}
+
+/* Telefoni piccoli */
+@media (max-width: 480px) {
+  .meta-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .report-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Filtri report a 2 colonne per ridurre lo scroll verticale */
+  .report-filters {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .report-filters .primary-button {
+    grid-column: 1 / -1;
+  }
+
+  .stat-strip strong {
+    font-size: 26px;
   }
 }
