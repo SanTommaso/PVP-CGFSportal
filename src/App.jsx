@@ -27,6 +27,40 @@ const exerciseDefaults = {
   imageUrl2: "",
 };
 
+function exerciseToForm(exercise) {
+  if (!exercise) {
+    return { ...exerciseDefaults, ageGroups: [...exerciseDefaults.ageGroups] };
+  }
+  return {
+    title: exercise.title || "",
+    description: exercise.description || "",
+    exerciseType: exercise.exerciseType || "Base",
+    durationSeconds: Number(exercise.durationSeconds || 600),
+    ageGroups: Array.isArray(exercise.ageGroups) && exercise.ageGroups.length
+      ? [...exercise.ageGroups]
+      : [...exerciseDefaults.ageGroups],
+    typology: exercise.typology || exercise.category || "Tecnica",
+    subtype: exercise.subtype || exercise.objective || "palleggio alzata",
+    regime: exercise.regime || "Metabolico",
+    regimeSubtype: exercise.regimeSubtype || "Agilita",
+    youtubeUrl: exercise.youtubeUrl || "",
+    youtubeUrl2: exercise.youtubeUrl2 || "",
+    imageUrl: exercise.imageUrl || "",
+    imageUrl2: exercise.imageUrl2 || "",
+  };
+}
+
+function exercisePayloadFromForm(form) {
+  return {
+    ...form,
+    areaId: "shared",
+    title: form.title.trim(),
+    duration: formatDuration(form.durationSeconds),
+    category: form.typology,
+    objective: form.subtype,
+  };
+}
+
 const ageOptions = Array.from({ length: 16 }, (_, index) => `${index + 5} anni`);
 const typologyOptions = ["Didattica", "Tecnica", "Sintetico", "Tattica", "Globale"];
 const subtypeOptions = [
@@ -276,59 +310,143 @@ function CgfsExercises() {
   const [query, setQuery] = useState("");
   const [exercises, setExercises] = useState([]);
   const [selectedExercise, setSelectedExercise] = useState(null);
-  const [formOpen, setFormOpen] = useState(true);
+  const [drawerMode, setDrawerMode] = useState(null);
+  const [editingExercise, setEditingExercise] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     dataClient.getExercises({ query }).then((items) => {
       setExercises(items);
-      setSelectedExercise((current) => current || items[0] || null);
+      setSelectedExercise((current) => {
+        if (current) {
+          const match = items.find((item) => item.id === current.id);
+          if (match) return match;
+        }
+        return items[0] || null;
+      });
     });
   }, [query]);
 
+  useEffect(() => {
+    setConfirmDelete(false);
+  }, [selectedExercise?.id]);
+
+  function openCreate() {
+    setEditingExercise(null);
+    setDrawerMode("create");
+    setConfirmDelete(false);
+    setError("");
+  }
+
+  function openEdit() {
+    if (!selectedExercise) return;
+    setEditingExercise(selectedExercise);
+    setDrawerMode("edit");
+    setConfirmDelete(false);
+    setError("");
+  }
+
+  function closeDrawer() {
+    setDrawerMode(null);
+    setEditingExercise(null);
+  }
+
   async function saveExercise(form) {
-    const exercise = await dataClient.createExercise({
-      ...form,
-      areaId: "shared",
-      title: form.title.trim(),
-      duration: formatDuration(form.durationSeconds),
-      category: form.typology,
-      objective: form.subtype,
-      youtubeUrl: form.youtubeUrl,
+    const payload = exercisePayloadFromForm(form);
+    const exercise = drawerMode === "edit" && editingExercise
+      ? await dataClient.updateExercise(editingExercise.id, {
+          ...payload,
+          levelId: editingExercise.levelId,
+        })
+      : await dataClient.createExercise(payload);
+
+    setExercises((items) => {
+      if (items.some((item) => item.id === exercise.id)) {
+        return items.map((item) => (item.id === exercise.id ? exercise : item));
+      }
+      return [exercise, ...items];
     });
-    setExercises((items) => [exercise, ...items]);
     setSelectedExercise(exercise);
+    closeDrawer();
+  }
+
+  async function deleteSelected() {
+    if (!selectedExercise || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const removedId = selectedExercise.id;
+      await dataClient.deleteExercise(removedId);
+      const remaining = exercises.filter((item) => item.id !== removedId);
+      setExercises(remaining);
+      setSelectedExercise(remaining[0] || null);
+      if (editingExercise?.id === removedId) closeDrawer();
+      setConfirmDelete(false);
+    } catch (err) {
+      setError(err.message || "Impossibile rimuovere l'esercizio");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <main className="workspace cgfs-workspace no-sidebar">
+    <main className={`workspace cgfs-workspace no-sidebar${drawerMode ? "" : " catalog-only"}`}>
       <section className="content-area">
         <div className="section-header">
           <div>
             <p>Area CGFS</p>
             <h1>Catalogo esercizi</h1>
           </div>
-          <button className="primary-button" type="button" onClick={() => setFormOpen(true)}>
+          <button className="primary-button" type="button" onClick={openCreate}>
             Aggiungi esercizio
           </button>
         </div>
+        {error ? <p className="error-box" role="alert">{error}</p> : null}
         <ExerciseCatalog
           exercises={exercises}
           query={query}
           setQuery={setQuery}
           selectedExercise={selectedExercise}
           setSelectedExercise={setSelectedExercise}
+          confirmDelete={confirmDelete}
+          onRequestDelete={() => setConfirmDelete(true)}
+          onCancelDelete={() => setConfirmDelete(false)}
+          onConfirmDelete={deleteSelected}
+          onEdit={openEdit}
+          busy={busy}
         />
       </section>
-      {formOpen ? (
+      {drawerMode ? (
         <aside className="form-drawer wide-form">
-          <ExerciseForm title="Aggiungi esercizio" onClose={() => setFormOpen(false)} onSave={saveExercise} />
+          <ExerciseForm
+            key={drawerMode === "edit" ? editingExercise?.id || "edit" : "create"}
+            title={drawerMode === "edit" ? "Modifica esercizio" : "Aggiungi esercizio"}
+            submitLabel={drawerMode === "edit" ? "Salva modifiche" : "Salva esercizio condiviso"}
+            initialExercise={drawerMode === "edit" ? editingExercise : null}
+            onClose={closeDrawer}
+            onSave={saveExercise}
+          />
         </aside>
       ) : null}
     </main>
   );
 }
 
-function ExerciseCatalog({ exercises, query, setQuery, selectedExercise, setSelectedExercise }) {
+function ExerciseCatalog({
+  exercises,
+  query,
+  setQuery,
+  selectedExercise,
+  setSelectedExercise,
+  confirmDelete,
+  onRequestDelete,
+  onCancelDelete,
+  onConfirmDelete,
+  onEdit,
+  busy,
+}) {
   const embedUrl = getYouTubeEmbedUrl(selectedExercise?.youtubeUrl);
   return (
     <>
@@ -345,7 +463,7 @@ function ExerciseCatalog({ exercises, query, setQuery, selectedExercise, setSele
       </div>
       <div className="exercise-layout">
         <div className="exercise-list">
-          {exercises.map((exercise) => (
+          {exercises.length ? exercises.map((exercise) => (
             <button
               key={exercise.id}
               className={selectedExercise?.id === exercise.id ? "exercise-row selected" : "exercise-row"}
@@ -360,7 +478,9 @@ function ExerciseCatalog({ exercises, query, setQuery, selectedExercise, setSele
                 <small>{exercise.subtype || exercise.objective} · {exercise.ageGroups?.join(", ") || exercise.players}</small>
               </span>
             </button>
-          ))}
+          )) : (
+            <p className="empty-list">Nessun esercizio in catalogo.</p>
+          )}
         </div>
         <article className="detail-panel">
           {selectedExercise ? (
@@ -377,13 +497,36 @@ function ExerciseCatalog({ exercises, query, setQuery, selectedExercise, setSele
                   <div className="empty-video">Video YouTube non collegato</div>
                 )}
               </div>
-              <h2>{selectedExercise.title}</h2>
+              <div className="detail-heading">
+                <h2>{selectedExercise.title}</h2>
+                <div className="detail-actions">
+                  <button className="secondary-button" type="button" onClick={onEdit} disabled={busy}>
+                    Modifica
+                  </button>
+                  <button className="danger-button" type="button" onClick={onRequestDelete} disabled={busy}>
+                    Rimuovi
+                  </button>
+                </div>
+              </div>
               <p>{selectedExercise.description}</p>
               <div className="meta-grid">
                 <span>{selectedExercise.exerciseType || "Base"}</span>
                 <span>{selectedExercise.typology || selectedExercise.category}</span>
                 <span>{selectedExercise.duration || formatDuration(selectedExercise.durationSeconds)}</span>
               </div>
+              {confirmDelete ? (
+                <div className="confirm-banner" role="alertdialog" aria-labelledby="delete-exercise-title">
+                  <p id="delete-exercise-title">Rimuovere {selectedExercise.title} dal catalogo condiviso?</p>
+                  <div className="confirm-banner-actions">
+                    <button className="secondary-button" type="button" onClick={onCancelDelete} disabled={busy}>
+                      Annulla
+                    </button>
+                    <button className="danger-button solid" type="button" onClick={onConfirmDelete} disabled={busy}>
+                      {busy ? "Rimozione…" : "Conferma rimozione"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </>
           ) : (
             <p>Nessun esercizio selezionato.</p>
@@ -394,8 +537,10 @@ function ExerciseCatalog({ exercises, query, setQuery, selectedExercise, setSele
   );
 }
 
-function ExerciseForm({ title, onSave, onClose }) {
-  const [form, setForm] = useState(exerciseDefaults);
+function ExerciseForm({ title, onSave, onClose, initialExercise = null, submitLabel = "Salva esercizio condiviso" }) {
+  const [form, setForm] = useState(() => exerciseToForm(initialExercise));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const minutes = Math.round(Number(form.durationSeconds || 0) / 60);
 
   function update(field, value) {
@@ -411,10 +556,19 @@ function ExerciseForm({ title, onSave, onClose }) {
     }));
   }
 
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
-    onSave(form);
-    setForm(exerciseDefaults);
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      await onSave(form);
+      if (!initialExercise) setForm(exerciseToForm(null));
+    } catch (err) {
+      setError(err.message || "Salvataggio non riuscito");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -513,7 +667,10 @@ function ExerciseForm({ title, onSave, onClose }) {
             <input value={form.imageUrl2} onChange={(event) => update("imageUrl2", event.target.value)} placeholder="URL immagine" />
           </label>
         </div>
-        <button className="primary-button full" type="submit">Salva esercizio condiviso</button>
+        {error ? <p className="error-box" role="alert">{error}</p> : null}
+        <button className="primary-button full" type="submit" disabled={saving}>
+          {saving ? "Salvataggio…" : submitLabel}
+        </button>
       </form>
     </>
   );
@@ -955,15 +1112,7 @@ function PvpExerciseDatabase({ exercises, setExercises }) {
   const [formOpen, setFormOpen] = useState(false);
 
   async function saveExercise(form) {
-    const exercise = await dataClient.createExercise({
-      ...form,
-      areaId: "shared",
-      title: form.title.trim(),
-      duration: formatDuration(form.durationSeconds),
-      category: form.typology,
-      objective: form.subtype,
-      youtubeUrl: form.youtubeUrl,
-    });
+    const exercise = await dataClient.createExercise(exercisePayloadFromForm(form));
     setExercises((items) => [exercise, ...items]);
   }
 

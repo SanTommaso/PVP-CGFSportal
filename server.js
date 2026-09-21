@@ -103,6 +103,33 @@ function exerciseOut(ex) {
   return { ...ex, ageGroups: parseJson(ex.ageGroups) };
 }
 
+function exerciseDataFromBody(p, existing = null) {
+  const title = String(p.title ?? "").trim();
+  const hasDuration = p.durationSeconds != null && p.durationSeconds !== "";
+  return {
+    areaId: p.areaId || existing?.areaId || "shared",
+    levelId: p.levelId !== undefined ? (p.levelId || null) : (existing?.levelId ?? null),
+    createdByCoachId: p.createdByCoachId !== undefined ? (p.createdByCoachId || null) : (existing?.createdByCoachId ?? null),
+    title,
+    category: p.category || null,
+    objective: p.objective || null,
+    description: p.description || null,
+    players: p.players || null,
+    duration: p.duration || null,
+    exerciseType: p.exerciseType || null,
+    durationSeconds: hasDuration ? Number(p.durationSeconds) : (existing?.durationSeconds ?? null),
+    ageGroups: Array.isArray(p.ageGroups) ? JSON.stringify(p.ageGroups) : (existing?.ageGroups ?? null),
+    typology: p.typology || null,
+    subtype: p.subtype || null,
+    regime: p.regime || null,
+    regimeSubtype: p.regimeSubtype || null,
+    youtubeUrl: p.youtubeUrl || null,
+    youtubeUrl2: p.youtubeUrl2 || null,
+    imageUrl: p.imageUrl || null,
+    imageUrl2: p.imageUrl2 || null,
+  };
+}
+
 function surveyOut(s) {
   return { ...s, questions: parseJson(s.questions) };
 }
@@ -143,35 +170,46 @@ app.get("/api/exercises", requireAuth, async (req, res) => {
 
 app.post("/api/exercises", requireAuth, async (req, res) => {
   try {
-    const p = req.body ?? {};
+    const data = exerciseDataFromBody(req.body ?? {});
+    if (!data.title) return res.status(400).json({ error: "Il titolo è obbligatorio" });
     const exercise = await prisma.exercise.create({
       data: {
         id: `exercise-${Date.now()}`,
-        areaId: p.areaId || "shared",
-        levelId: p.levelId || null,
-        title: String(p.title ?? "").trim(),
-        category: p.category || null,
-        objective: p.objective || null,
-        description: p.description || null,
-        players: p.players || null,
-        duration: p.duration || null,
-        exerciseType: p.exerciseType || null,
-        durationSeconds: p.durationSeconds ? Number(p.durationSeconds) : null,
-        ageGroups: Array.isArray(p.ageGroups) ? JSON.stringify(p.ageGroups) : null,
-        typology: p.typology || null,
-        subtype: p.subtype || null,
-        regime: p.regime || null,
-        regimeSubtype: p.regimeSubtype || null,
-        youtubeUrl: p.youtubeUrl || null,
-        youtubeUrl2: p.youtubeUrl2 || null,
-        imageUrl: p.imageUrl || null,
-        imageUrl2: p.imageUrl2 || null,
+        ...data,
       },
     });
     res.json(exerciseOut(exercise));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Errore nella creazione dell'esercizio" });
+  }
+});
+
+app.put("/api/exercises/:id", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await prisma.exercise.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: "Esercizio non trovato" });
+    const data = exerciseDataFromBody(req.body ?? {}, existing);
+    if (!data.title) return res.status(400).json({ error: "Il titolo è obbligatorio" });
+    const exercise = await prisma.exercise.update({ where: { id }, data });
+    res.json(exerciseOut(exercise));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Errore nell'aggiornamento dell'esercizio" });
+  }
+});
+
+app.delete("/api/exercises/:id", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await prisma.exercise.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: "Esercizio non trovato" });
+    await prisma.exercise.delete({ where: { id } });
+    res.json({ ok: true, id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Errore nella rimozione dell'esercizio" });
   }
 });
 

@@ -43,13 +43,39 @@ export const mockAdapter = {
   },
 
   async createExercise(payload) {
+    const title = String(payload.title ?? "").trim();
+    if (!title) throw new Error("Il titolo è obbligatorio");
     const exercise = {
       ...payload,
       id: `exercise-${Date.now()}`,
+      title,
       createdAt: new Date().toISOString(),
     };
     exercises = [exercise, ...exercises];
     return wait(exercise);
+  },
+
+  async updateExercise(id, payload) {
+    const index = exercises.findIndex((exercise) => exercise.id === id);
+    if (index === -1) throw new Error("Esercizio non trovato");
+    const title = String(payload.title ?? exercises[index].title ?? "").trim();
+    if (!title) throw new Error("Il titolo è obbligatorio");
+    const exercise = {
+      ...exercises[index],
+      ...payload,
+      id,
+      title,
+    };
+    exercises = exercises.map((item, itemIndex) => (itemIndex === index ? exercise : item));
+    return wait(exercise);
+  },
+
+  async deleteExercise(id) {
+    if (!exercises.some((exercise) => exercise.id === id)) {
+      throw new Error("Esercizio non trovato");
+    }
+    exercises = exercises.filter((exercise) => exercise.id !== id);
+    return wait({ ok: true, id });
   },
 
   async getCoachProfiles({ areaId = "pvp" } = {}) {

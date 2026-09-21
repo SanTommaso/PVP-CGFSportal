@@ -34,6 +34,19 @@ export const prismaAdapter = {
     });
   },
 
+  async updateExercise(id, payload) {
+    return apiFetch(`/api/exercises/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async deleteExercise(id) {
+    return apiFetch(`/api/exercises/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+  },
+
   async getCoachProfiles({ areaId = "pvp" } = {}) {
     return apiFetch(`/api/coach-profiles?areaId=${areaId}`);
   },

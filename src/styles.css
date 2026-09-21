@@ -352,6 +352,10 @@ h2 {
   grid-template-columns: minmax(0, 1fr) minmax(360px, 480px);
 }
 
+.cgfs-workspace.no-sidebar.catalog-only {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .sidebar {
   position: sticky;
   top: 94px;
@@ -576,6 +580,96 @@ textarea:focus {
 
 .detail-panel {
   padding: 18px;
+}
+
+.detail-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.detail-heading h2 {
+  margin: 0;
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.secondary-button,
+.danger-button {
+  min-height: 38px;
+  border-radius: 7px;
+  padding: 0 14px;
+  font-weight: 800;
+}
+
+.secondary-button {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: #111318;
+}
+
+.danger-button {
+  border: 1px solid #f1c5c3;
+  background: #fff5f5;
+  color: #b42318;
+}
+
+.danger-button.solid {
+  background: #b42318;
+  border-color: #b42318;
+  color: #fff;
+}
+
+.secondary-button:disabled,
+.danger-button:disabled,
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.confirm-banner {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid #f1c5c3;
+  border-radius: 8px;
+  background: #fff5f5;
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.confirm-banner p {
+  margin: 0;
+}
+
+.confirm-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.error-box {
+  border-radius: 7px;
+  background: #fff3f3;
+  color: #b42318;
+  padding: 11px 12px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.empty-list {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 800;
 }
 
 .video-frame {
@@ -1178,6 +1272,14 @@ legend {
   .dashboard-grid,
   .report-summary {
     grid-template-columns: 1fr;
+  }
+
+  .detail-heading {
+    flex-direction: column;
+  }
+
+  .detail-actions {
+    justify-content: flex-start;
   }
 
   /* Report-filters a 2 colonne su mobile medio: riduce lo scroll verticale */
