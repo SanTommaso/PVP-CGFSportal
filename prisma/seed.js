@@ -98,9 +98,9 @@ const exercises = [
   },
   {
     id: "exercise-4", areaId: "shared", levelId: "u16",
-    title: "Rondoschiacciata 4 vs 4 + P", category: "Tattica", objective: "schiacciata",
+    title: "Rondoschiacciata 4 vs 4 + P", category: "Tattica", objective: "Attacco",
     exerciseType: "Variante", durationSeconds: 1200, ageGroups: JSON.stringify(["15 anni","16 anni","17 anni"]),
-    typology: "Tattica", subtype: "schiacciata", regime: "Anabolico", regimeSubtype: "Forza Esplosiva",
+    typology: "Tattica", subtype: "Attacco", regime: "Anabolico", regimeSubtype: "Forza Esplosiva",
     description: "Esercizio per migliorare fase di attacco e copertura in equilibrio numerico.",
     players: "9 atlete", duration: "20 min",
     youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",

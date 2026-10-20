@@ -40,7 +40,7 @@ function exerciseToForm(exercise) {
       ? [...exercise.ageGroups]
       : [...exerciseDefaults.ageGroups],
     typology: exercise.typology || exercise.category || "Tecnica",
-    subtype: exercise.subtype || exercise.objective || "palleggio alzata",
+    subtype: normalizeSubtype(exercise.subtype || exercise.objective || "palleggio alzata"),
     regime: exercise.regime || "Metabolico",
     regimeSubtype: exercise.regimeSubtype || "Agilita",
     youtubeUrl: exercise.youtubeUrl || "",
@@ -62,20 +62,38 @@ function exercisePayloadFromForm(form) {
 }
 
 const ageOptions = Array.from({ length: 16 }, (_, index) => `${index + 5} anni`);
-const typologyOptions = ["Didattica", "Tecnica", "Sintetico", "Tattica", "Globale"];
+const typologyOptions = ["Didattica", "Tecnica", "Sintetico", "Tattica", "Globale", "Sviluppo"];
 const subtypeOptions = [
   "palleggio alzata",
   "palleggio ricezione",
   "bagher ricezione",
   "bagher difesa",
   "bagher appoggio",
-  "schiacciata",
+  "Attacco",
   "battuta",
   "muro",
   "spostamenti",
 ];
-const regimeOptions = ["Metabolico", "Anabolico"];
-const regimeSubtypeOptions = ["Forza", "Forza Esplosiva", "Agilita", "Rapidita"];
+const regimeOptions = ["Metabolico", "Anabolico", "Aerobico", "Anaerobico", "Misto"];
+const regimeSubtypeOptions = [
+  "Forza",
+  "Forza Esplosiva",
+  "Agilita",
+  "Rapidita",
+  "Core Dinamico",
+  "Core Statico",
+  "Coord Generale",
+  "Coord Speciale",
+];
+
+function normalizeSubtype(value) {
+  return String(value || "").toLowerCase() === "schiacciata" ? "Attacco" : value;
+}
+
+function withCurrentOption(options, current) {
+  if (current && !options.includes(current)) return [...options, current];
+  return options;
+}
 
 function navigate(path) {
   window.history.pushState({}, "", path);
@@ -475,7 +493,7 @@ function ExerciseCatalog({
               </span>
               <span>
                 <strong>{exercise.title}</strong>
-                <small>{exercise.subtype || exercise.objective} · {exercise.ageGroups?.join(", ") || exercise.players}</small>
+                <small>{normalizeSubtype(exercise.subtype || exercise.objective)} · {exercise.ageGroups?.join(", ") || exercise.players}</small>
               </span>
             </button>
           )) : (
@@ -623,13 +641,13 @@ function ExerciseForm({ title, onSave, onClose, initialExercise = null, submitLa
           <label>
             Tipologia
             <select value={form.typology} onChange={(event) => update("typology", event.target.value)}>
-              {typologyOptions.map((item) => <option key={item}>{item}</option>)}
+              {withCurrentOption(typologyOptions, form.typology).map((item) => <option key={item}>{item}</option>)}
             </select>
           </label>
           <label>
             Sottosezione tipologia
             <select value={form.subtype} onChange={(event) => update("subtype", event.target.value)}>
-              {subtypeOptions.map((item) => <option key={item}>{item}</option>)}
+              {withCurrentOption(subtypeOptions, form.subtype).map((item) => <option key={item}>{item}</option>)}
             </select>
           </label>
         </div>
@@ -637,13 +655,13 @@ function ExerciseForm({ title, onSave, onClose, initialExercise = null, submitLa
           <label>
             Regime
             <select value={form.regime} onChange={(event) => update("regime", event.target.value)}>
-              {regimeOptions.map((item) => <option key={item}>{item}</option>)}
+              {withCurrentOption(regimeOptions, form.regime).map((item) => <option key={item}>{item}</option>)}
             </select>
           </label>
           <label>
             Sottosezione regime
             <select value={form.regimeSubtype} onChange={(event) => update("regimeSubtype", event.target.value)}>
-              {regimeSubtypeOptions.map((item) => <option key={item}>{item}</option>)}
+              {withCurrentOption(regimeSubtypeOptions, form.regimeSubtype).map((item) => <option key={item}>{item}</option>)}
             </select>
           </label>
         </div>
@@ -1126,7 +1144,7 @@ function PvpExerciseDatabase({ exercises, setExercises }) {
           <ExerciseForm title="Nuovo esercizio database" onClose={() => setFormOpen(false)} onSave={saveExercise} />
         </section>
       ) : null}
-      <DataPanel title="Esercizi disponibili per CGFS e PVP" items={exercises.map((exercise) => `${exercise.title} · ${exercise.typology || exercise.category} · ${exercise.subtype || exercise.objective}`)} />
+      <DataPanel title="Esercizi disponibili per CGFS e PVP" items={exercises.map((exercise) => `${exercise.title} · ${exercise.typology || exercise.category} · ${normalizeSubtype(exercise.subtype || exercise.objective)}`)} />
     </div>
   );
 }
